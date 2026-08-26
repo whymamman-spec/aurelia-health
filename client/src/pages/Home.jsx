@@ -1,14 +1,12 @@
-import { Container, Section } from "../components";
+import Hero from "../components/home/Hero";
+import QuickActions from "../components/home/QuickActions";
 
 function Home() {
   return (
-    <Section>
-      <Container>
-        <h1 className="text-4xl font-bold text-aurelia-text">Aurelia Health</h1>
-
-        <p className="mt-4 text-aurelia-muted">Home page coming next.</p>
-      </Container>
-    </Section>
+    <>
+      <Hero />
+      <QuickActions />
+    </>
   );
 }
 
