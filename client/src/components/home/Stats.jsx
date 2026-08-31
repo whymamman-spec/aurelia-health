@@ -2,10 +2,26 @@ import { Container, Section } from "../index";
 import CountUp from "../CountUp";
 
 const stats = [
-  { value: 15, suffix: "+", label: "Medical Departments" },
-  { value: 50, suffix: "+", label: "Experienced Doctors" },
-  { value: 20, suffix: "k+", label: "Patients Served" },
-  { value: 24, suffix: "/7", label: "Emergency Care" },
+  {
+    value: 15,
+    suffix: "+",
+    label: "Medical Departments",
+  },
+  {
+    value: 50,
+    suffix: "+",
+    label: "Experienced Doctors",
+  },
+  {
+    value: 20,
+    suffix: "k+",
+    label: "Patients Served",
+  },
+  {
+    value: 24,
+    suffix: "/7",
+    label: "Emergency Care",
+  },
 ];
 
 function Stats() {
