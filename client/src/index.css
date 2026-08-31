@@ -25,6 +25,33 @@
   --radius-aurelia-xl: 24px;
 }
 
+@keyframes aurelia-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes aurelia-float-card {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@theme {
+  --animate-aurelia-float: aurelia-float 6s ease-in-out infinite;
+  --animate-aurelia-float-card: aurelia-float-card 5s ease-in-out infinite;
+}
+
 /* Global styles continue below*/
 
 :root {
@@ -74,4 +101,22 @@ button {
 img {
   max-width: 100%;
   display: block;
+}
+
+/* Accessibility: Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .animate-aurelia-float,
+  .animate-aurelia-float-card {
+    animation: none;
+    transform: none;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+
+  * {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
 }
