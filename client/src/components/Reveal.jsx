@@ -15,7 +15,9 @@ function Reveal({ children, delay = 0 }) {
       { threshold: 0.15 },
     );
 
-    if (ref.current) observer.observe(ref.current);
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
 
     return () => observer.disconnect();
   }, []);
