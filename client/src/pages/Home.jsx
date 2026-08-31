@@ -10,13 +10,28 @@ import CTA from "../components/home/CTA";
 function Home() {
   return (
     <>
+      {/* Hero */}
       <Hero />
+
+      {/* Quick Actions */}
       <QuickActions />
+
+      {/* Trust Statistics */}
       <Stats />
+
+      {/* Medical Services */}
       <Services />
+
+      {/* Specialists */}
       <Doctors />
+
+      {/* Why Choose Aurelia */}
       <WhyChooseUs />
+
+      {/* Patient Stories */}
       <Testimonials />
+
+      {/* Appointment CTA */}
       <CTA />
     </>
   );
