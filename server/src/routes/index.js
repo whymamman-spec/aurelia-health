@@ -1,5 +1,6 @@
 import { Router } from "express";
 import departmentRoutes from "./departments.js";
+import doctorRoutes from "./doctors.js";
 
 const router = Router();
 
@@ -12,5 +13,6 @@ router.get("/", (req, res) => {
 });
 
 router.use("/departments", departmentRoutes);
+router.use("/doctors", doctorRoutes);
 
 export default router;
