@@ -1,3 +1,5 @@
+import Reveal from "../components/Reveal";
+
 import Hero from "../components/home/Hero";
 import QuickActions from "../components/home/QuickActions";
 import Stats from "../components/home/Stats";
@@ -11,13 +13,34 @@ function Home() {
   return (
     <>
       <Hero />
-      <QuickActions />
-      <Stats />
-      <Services />
-      <Doctors />
-      <WhyChooseUs />
-      <Testimonials />
-      <CTA />
+
+      <Reveal>
+        <QuickActions />
+      </Reveal>
+
+      <Reveal delay={100}>
+        <Stats />
+      </Reveal>
+
+      <Reveal delay={150}>
+        <Services />
+      </Reveal>
+
+      <Reveal delay={200}>
+        <Doctors />
+      </Reveal>
+
+      <Reveal delay={250}>
+        <WhyChooseUs />
+      </Reveal>
+
+      <Reveal delay={300}>
+        <Testimonials />
+      </Reveal>
+
+      <Reveal delay={350}>
+        <CTA />
+      </Reveal>
     </>
   );
 }

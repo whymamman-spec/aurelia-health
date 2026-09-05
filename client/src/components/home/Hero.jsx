@@ -52,13 +52,16 @@ function Hero() {
 
           {/* Right */}
           <div className="relative">
-            <div className="absolute -left-6 -top-6 h-32 w-32 rounded-full bg-aurelia-teal-light blur-3xl" />
-            <div className="absolute -bottom-6 -right-6 h-40 w-40 rounded-full bg-aurelia-coral/20 blur-3xl" />
+            {/* Decorative glow */}
+            <div className="absolute -left-10 top-8 h-48 w-48 rounded-full bg-aurelia-teal-light opacity-60 blur-3xl animate-pulse" />
 
+            <div className="absolute -right-10 bottom-8 h-56 w-56 rounded-full bg-aurelia-coral opacity-20 blur-3xl animate-pulse" />
+
+            {/* Doctor Image */}
             <img
-              src="https://images.unsplash.com/photo-1651008376811-b90baee60c1f?auto=format&fit=crop&w=900&q=80"
-              alt="African doctor smiling in a modern hospital"
-              className="relative z-10 rounded-[28px] object-cover shadow-xl"
+              src="https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=900&q=80"
+              alt="Nigerian female doctor smiling in a modern hospital"
+              className="relative z-10 h-full w-full rounded-[28px] object-cover shadow-xl"
             />
           </div>
         </div>
