@@ -131,3 +131,55 @@ export async function getAppointmentByReference(req, res) {
     if (db) await db.close();
   }
 }
+
+export async function cancelAppointment(req, res) {
+  let db;
+
+  try {
+    const { reference } = req.params;
+
+    db = await connectDatabase();
+
+    const appointment = await db.get(
+      `SELECT id, status
+       FROM appointments
+       WHERE booking_reference = ?`,
+      [reference],
+    );
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found.",
+      });
+    }
+
+    if (appointment.status === "Cancelled") {
+      return res.status(400).json({
+        success: false,
+        message: "Appointment has already been cancelled.",
+      });
+    }
+
+    await db.run(
+      `UPDATE appointments
+       SET status = 'Cancelled'
+       WHERE booking_reference = ?`,
+      [reference],
+    );
+
+    res.json({
+      success: true,
+      message: "Appointment cancelled successfully.",
+    });
+  } catch (error) {
+    console.error("Cancellation error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Unable to cancel appointment.",
+    });
+  } finally {
+    if (db) await db.close();
+  }
+}
