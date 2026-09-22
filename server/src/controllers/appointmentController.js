@@ -81,3 +81,53 @@ export async function createAppointment(req, res) {
     }
   }
 }
+
+export async function getAppointmentByReference(req, res) {
+  let db;
+
+  try {
+    const { reference } = req.params;
+
+    db = await connectDatabase();
+
+    const appointment = await db.get(
+      `SELECT
+          appointments.booking_reference,
+          appointments.patient_name,
+          appointments.appointment_date,
+          appointments.appointment_time,
+          appointments.queue_number,
+          appointments.status,
+          departments.name AS department,
+          doctors.full_name AS doctor
+       FROM appointments
+       JOIN departments
+         ON appointments.department_id = departments.id
+       JOIN doctors
+         ON appointments.doctor_id = doctors.id
+       WHERE appointments.booking_reference = ?`,
+      [reference],
+    );
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found.",
+      });
+    }
+
+    res.json({
+      success: true,
+      appointment,
+    });
+  } catch (error) {
+    console.error("Lookup error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Unable to retrieve appointment.",
+    });
+  } finally {
+    if (db) await db.close();
+  }
+}
