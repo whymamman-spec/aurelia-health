@@ -27,6 +27,7 @@ function Appointments() {
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [confirmation, setConfirmation] = useState(null);
+  const [bookedSlots, setBookedSlots] = useState([]);
 
   const [form, setForm] = useState({
     patientName: "",
@@ -62,6 +63,31 @@ function Appointments() {
   const filteredDoctors = doctors.filter(
     (doctor) => String(doctor.department_id) === form.department,
   );
+
+  useEffect(() => {
+    async function fetchBookedSlots() {
+      if (!form.doctor || !form.appointmentDate) {
+        setBookedSlots([]);
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/appointments/slots?doctorId=${form.doctor}&date=${form.appointmentDate}`,
+        );
+
+        const data = await response.json();
+
+        if (data.success) {
+          setBookedSlots(data.bookedSlots);
+        }
+      } catch (error) {
+        console.error("Failed to load booked slots:", error);
+      }
+    }
+
+    fetchBookedSlots();
+  }, [form.doctor, form.appointmentDate]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -250,11 +276,15 @@ function Appointments() {
                 >
                   <option value="">Select Time Slot</option>
 
-                  {timeSlots.map((slot) => (
-                    <option key={slot} value={slot}>
-                      {slot}
-                    </option>
-                  ))}
+                  {timeSlots.map((slot) => {
+                    const isBooked = bookedSlots.includes(slot);
+
+                    return (
+                      <option key={slot} value={slot} disabled={isBooked}>
+                        {isBooked ? `${slot} — Booked` : slot}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             </div>
