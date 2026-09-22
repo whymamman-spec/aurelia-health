@@ -8,7 +8,7 @@ import {
   Search,
 } from "lucide-react";
 
-import { Button, Container, Section } from "../components";
+import { Button, Container, Section, ConfirmationModal } from "../components";
 
 const timeSlots = [
   "09:00",
@@ -42,6 +42,8 @@ function Appointments() {
   const [lookupRef, setLookupRef] = useState("");
   const [lookupResult, setLookupResult] = useState(null);
   const [lookupError, setLookupError] = useState("");
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   const [form, setForm] = useState({
     patientName: "",
@@ -193,6 +195,39 @@ function Appointments() {
       setLookupResult(data.appointment);
     } catch {
       setLookupError("Unable to connect to the server.");
+    }
+  }
+
+  async function handleCancelAppointment() {
+    if (!lookupResult) return;
+
+    setIsCancelling(true);
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/appointments/${lookupResult.booking_reference}/cancel`,
+        {
+          method: "PATCH",
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.message);
+        return;
+      }
+
+      setLookupResult((prev) => ({
+        ...prev,
+        status: "Cancelled",
+      }));
+
+      setShowCancelModal(false);
+    } catch {
+      alert("Unable to cancel appointment.");
+    } finally {
+      setIsCancelling(false);
     }
   }
 
@@ -407,7 +442,13 @@ function Appointments() {
                         Appointment Found
                       </h3>
 
-                      <p className="text-sm text-green-700">
+                      <p
+                        className={`text-sm font-medium ${
+                          lookupResult.status === "Cancelled"
+                            ? "text-red-600"
+                            : "text-green-700"
+                        }`}
+                      >
                         Status: {lookupResult.status}
                       </p>
                     </div>
@@ -448,6 +489,16 @@ function Appointments() {
                       <span>Reference</span>
                       <strong>{lookupResult.booking_reference}</strong>
                     </div>
+
+                    {lookupResult.status === "Confirmed" && (
+                      <Button
+                        variant="outline"
+                        className="mt-5 w-full border-red-600 text-red-600 hover:bg-red-50"
+                        onClick={() => setShowCancelModal(true)}
+                      >
+                        Cancel Appointment
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
@@ -455,6 +506,17 @@ function Appointments() {
           )}
 
           {/* Confirmation Modal */}
+          <ConfirmationModal
+            isOpen={showCancelModal}
+            title="Cancel Appointment?"
+            message="This will cancel your appointment and immediately release your time slot for other patients. You can book another appointment afterwards."
+            confirmText="Yes, Cancel"
+            cancelText="Keep Appointment"
+            loading={isCancelling}
+            onCancel={() => setShowCancelModal(false)}
+            onConfirm={handleCancelAppointment}
+          />
+
           {confirmation && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
               <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
