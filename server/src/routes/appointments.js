@@ -4,6 +4,7 @@ import {
   createAppointment,
   getAppointmentByReference,
   cancelAppointment,
+  rescheduleAppointment,
 } from "../controllers/appointmentController.js";
 
 import { getBookedSlots } from "../controllers/slotController.js";
@@ -17,5 +18,6 @@ router.get("/slots", getBookedSlots);
 router.get("/:reference", getAppointmentByReference);
 
 router.patch("/:reference/cancel", cancelAppointment);
+router.patch("/:reference/reschedule", rescheduleAppointment);
 
 export default router;

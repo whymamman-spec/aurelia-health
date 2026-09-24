@@ -6,6 +6,7 @@ import {
   Stethoscope,
   CheckCircle,
   Search,
+  Edit,
 } from "lucide-react";
 
 import { Button, Container, Section, ConfirmationModal } from "../components";
@@ -42,8 +43,19 @@ function Appointments() {
   const [lookupRef, setLookupRef] = useState("");
   const [lookupResult, setLookupResult] = useState(null);
   const [lookupError, setLookupError] = useState("");
+
   const [isCancelling, setIsCancelling] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [isRescheduling, setIsRescheduling] = useState(false);
+
+  const [rescheduleForm, setRescheduleForm] = useState({
+    appointmentDate: "",
+    appointmentTime: "",
+  });
+
+  const [rescheduleSlots, setRescheduleSlots] = useState([]);
 
   const [form, setForm] = useState({
     patientName: "",
@@ -62,11 +74,8 @@ function Appointments() {
           fetch(`${import.meta.env.VITE_API_URL}/api/doctors`),
         ]);
 
-        const depData = await depRes.json();
-        const docData = await docRes.json();
-
-        setDepartments(depData);
-        setDoctors(docData);
+        setDepartments(await depRes.json());
+        setDoctors(await docRes.json());
       } catch (error) {
         console.error("Failed to load data:", error);
       } finally {
@@ -77,7 +86,7 @@ function Appointments() {
     loadData();
   }, []);
 
-  // Load booked slots whenever doctor or date changes
+  // Load booked slots for booking form
   useEffect(() => {
     async function fetchBookedSlots() {
       if (!form.doctor || !form.appointmentDate) {
@@ -95,7 +104,6 @@ function Appointments() {
         if (data.success) {
           setBookedSlots(data.bookedSlots);
 
-          // Reset selected time if it has become unavailable
           if (data.bookedSlots.includes(form.appointmentTime)) {
             setForm((prev) => ({
               ...prev,
@@ -104,19 +112,58 @@ function Appointments() {
           }
         }
       } catch (error) {
-        console.error("Failed to load booked slots:", error);
+        console.error(error);
       }
     }
 
     fetchBookedSlots();
   }, [form.doctor, form.appointmentDate]);
 
+  // Load booked slots inside reschedule modal
+  useEffect(() => {
+    async function loadRescheduleSlots() {
+      if (
+        !showRescheduleModal ||
+        !lookupResult ||
+        !rescheduleForm.appointmentDate
+      ) {
+        setRescheduleSlots([]);
+        return;
+      }
+
+      const doctor = doctors.find((d) => d.full_name === lookupResult.doctor);
+
+      if (!doctor) return;
+
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/appointments/slots?doctorId=${doctor.id}&date=${rescheduleForm.appointmentDate}`,
+        );
+
+        const data = await response.json();
+
+        if (data.success) {
+          setRescheduleSlots(data.bookedSlots);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    loadRescheduleSlots();
+  }, [
+    showRescheduleModal,
+    lookupResult,
+    rescheduleForm.appointmentDate,
+    doctors,
+  ]);
+
   const filteredDoctors = doctors.filter(
     (doctor) => String(doctor.department_id) === form.department,
   );
 
-  function handleChange(event) {
-    const { name, value } = event.target;
+  function handleChange(e) {
+    const { name, value } = e.target;
 
     setForm((prev) => ({
       ...prev,
@@ -125,8 +172,9 @@ function Appointments() {
     }));
   }
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+  // BOOK APPOINTMENT
+  async function handleSubmit(e) {
+    e.preventDefault();
 
     try {
       const response = await fetch(
@@ -142,9 +190,7 @@ function Appointments() {
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || "Booking failed");
-      }
+      if (!response.ok) throw new Error(data.message);
 
       setConfirmation({
         bookingReference: data.bookingReference,
@@ -169,16 +215,16 @@ function Appointments() {
 
       setBookedSlots([]);
     } catch (error) {
-      console.error(error);
-      alert(error.message || "Booking failed");
+      alert(error.message);
     }
   }
 
-  async function handleLookup(event) {
-    event.preventDefault();
+  // LOOKUP
+  async function handleLookup(e) {
+    e.preventDefault();
 
-    setLookupResult(null);
     setLookupError("");
+    setLookupResult(null);
 
     try {
       const response = await fetch(
@@ -188,19 +234,18 @@ function Appointments() {
       const data = await response.json();
 
       if (!response.ok) {
-        setLookupError(data.message || "Appointment not found.");
+        setLookupError(data.message);
         return;
       }
 
       setLookupResult(data.appointment);
     } catch {
-      setLookupError("Unable to connect to the server.");
+      setLookupError("Unable to connect to server.");
     }
   }
 
+  // CANCEL
   async function handleCancelAppointment() {
-    if (!lookupResult) return;
-
     setIsCancelling(true);
 
     try {
@@ -231,11 +276,48 @@ function Appointments() {
     }
   }
 
+  // RESCHEDULE
+  async function handleRescheduleAppointment() {
+    setIsRescheduling(true);
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/appointments/${lookupResult.booking_reference}/reschedule`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(rescheduleForm),
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.message);
+        return;
+      }
+
+      setLookupResult((prev) => ({
+        ...prev,
+        appointment_date: rescheduleForm.appointmentDate,
+        appointment_time: rescheduleForm.appointmentTime,
+        queue_number: data.queueNumber,
+      }));
+
+      setShowRescheduleModal(false);
+    } catch {
+      alert("Unable to reschedule appointment.");
+    } finally {
+      setIsRescheduling(false);
+    }
+  }
+
   return (
     <Section>
       <Container>
         <div className="mx-auto max-w-3xl">
-          {/* Header */}
           <div className="mb-8 text-center">
             <p className="font-semibold uppercase tracking-wider text-aurelia-teal">
               Aurelia Health
@@ -246,8 +328,7 @@ function Appointments() {
             </h1>
 
             <p className="mt-3 text-aurelia-muted">
-              Book appointments or retrieve an existing appointment using your
-              booking reference.
+              Book appointments or retrieve existing ones.
             </p>
           </div>
 
@@ -295,7 +376,7 @@ function Appointments() {
                   name="patientName"
                   value={form.patientName}
                   onChange={handleChange}
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3"
+                  className="w-full rounded-xl border px-4 py-3"
                   required
                 />
               </div>
@@ -307,11 +388,11 @@ function Appointments() {
                   name="department"
                   value={form.department}
                   onChange={handleChange}
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3"
+                  className="w-full rounded-xl border px-4 py-3"
                   required
                 >
                   <option value="">
-                    {loading ? "Loading departments..." : "Select Department"}
+                    {loading ? "Loading..." : "Select Department"}
                   </option>
 
                   {departments.map((dept) => (
@@ -333,14 +414,10 @@ function Appointments() {
                   value={form.doctor}
                   onChange={handleChange}
                   disabled={!form.department}
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 disabled:bg-gray-100"
+                  className="w-full rounded-xl border px-4 py-3"
                   required
                 >
-                  <option value="">
-                    {form.department
-                      ? "Select Doctor"
-                      : "Choose Department First"}
-                  </option>
+                  <option value="">Select Doctor</option>
 
                   {filteredDoctors.map((doctor) => (
                     <option key={doctor.id} value={doctor.id}>
@@ -362,7 +439,7 @@ function Appointments() {
                     name="appointmentDate"
                     value={form.appointmentDate}
                     onChange={handleChange}
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3"
+                    className="w-full rounded-xl border px-4 py-3"
                     required
                   />
                 </div>
@@ -377,7 +454,7 @@ function Appointments() {
                     name="appointmentTime"
                     value={form.appointmentTime}
                     onChange={handleChange}
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3"
+                    className="w-full rounded-xl border px-4 py-3"
                     required
                   >
                     <option value="">Select Time</option>
@@ -412,11 +489,10 @@ function Appointments() {
                   </label>
 
                   <input
-                    type="text"
                     value={lookupRef}
                     onChange={(e) => setLookupRef(e.target.value.toUpperCase())}
                     placeholder="AUR-XXXXXX"
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 uppercase"
+                    className="w-full rounded-xl border px-4 py-3 uppercase"
                     required
                   />
                 </div>
@@ -489,27 +565,123 @@ function Appointments() {
                       <span>Reference</span>
                       <strong>{lookupResult.booking_reference}</strong>
                     </div>
+                  </div>
 
-                    {lookupResult.status === "Confirmed" && (
+                  {lookupResult.status === "Confirmed" && (
+                    <>
+                      <Button
+                        className="mt-5 w-full"
+                        onClick={() => {
+                          setRescheduleForm({
+                            appointmentDate: lookupResult.appointment_date,
+                            appointmentTime: lookupResult.appointment_time,
+                          });
+
+                          setShowRescheduleModal(true);
+                        }}
+                      >
+                        <Edit size={18} />
+                        Reschedule Appointment
+                      </Button>
+
                       <Button
                         variant="outline"
-                        className="mt-5 w-full border-red-600 text-red-600 hover:bg-red-50"
+                        className="mt-3 w-full border-red-600 text-red-600 hover:bg-red-50"
                         onClick={() => setShowCancelModal(true)}
                       >
                         Cancel Appointment
                       </Button>
-                    )}
-                  </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
           )}
 
-          {/* Confirmation Modal */}
+          {/* RESCHEDULE MODAL */}
+          {showRescheduleModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+              <div className="w-full max-w-md rounded-3xl bg-white p-6">
+                <h2 className="text-2xl font-bold">Reschedule Appointment</h2>
+
+                <p className="mt-2 text-sm text-gray-600">
+                  Your booking reference will remain the same.
+                </p>
+
+                <div className="mt-6 space-y-4">
+                  <div>
+                    <label className="mb-2 block font-medium">New Date</label>
+
+                    <input
+                      type="date"
+                      value={rescheduleForm.appointmentDate}
+                      onChange={(e) =>
+                        setRescheduleForm((prev) => ({
+                          ...prev,
+                          appointmentDate: e.target.value,
+                          appointmentTime: "",
+                        }))
+                      }
+                      className="w-full rounded-xl border px-4 py-3"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block font-medium">New Time</label>
+
+                    <select
+                      value={rescheduleForm.appointmentTime}
+                      onChange={(e) =>
+                        setRescheduleForm((prev) => ({
+                          ...prev,
+                          appointmentTime: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-xl border px-4 py-3"
+                    >
+                      <option value="">Select Time</option>
+
+                      {timeSlots.map((slot) => {
+                        const booked =
+                          rescheduleSlots.includes(slot) &&
+                          slot !== lookupResult.appointment_time;
+
+                        return (
+                          <option key={slot} value={slot} disabled={booked}>
+                            {booked ? `${slot} — Booked` : slot}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mt-8 flex gap-3">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setShowRescheduleModal(false)}
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button
+                    className="flex-1"
+                    onClick={handleRescheduleAppointment}
+                    disabled={isRescheduling}
+                  >
+                    {isRescheduling ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* CANCEL MODAL */}
           <ConfirmationModal
             isOpen={showCancelModal}
             title="Cancel Appointment?"
-            message="This will cancel your appointment and immediately release your time slot for other patients. You can book another appointment afterwards."
+            message="This will cancel your appointment and immediately release your time slot for other patients."
             confirmText="Yes, Cancel"
             cancelText="Keep Appointment"
             loading={isCancelling}
@@ -517,6 +689,7 @@ function Appointments() {
             onConfirm={handleCancelAppointment}
           />
 
+          {/* BOOKING CONFIRMATION */}
           {confirmation && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
               <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
@@ -526,10 +699,6 @@ function Appointments() {
                   <h2 className="mt-4 text-2xl font-bold">
                     Appointment Confirmed
                   </h2>
-
-                  <p className="mt-2 text-sm text-gray-500">
-                    Please keep your booking reference.
-                  </p>
                 </div>
 
                 <div className="mt-6 space-y-3 rounded-2xl bg-gray-50 p-4">
@@ -570,7 +739,6 @@ function Appointments() {
                 </div>
 
                 <Button
-                  size="lg"
                   className="mt-6 w-full"
                   onClick={() => setConfirmation(null)}
                 >

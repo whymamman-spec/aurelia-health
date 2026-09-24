@@ -183,3 +183,96 @@ export async function cancelAppointment(req, res) {
     if (db) await db.close();
   }
 }
+
+export async function rescheduleAppointment(req, res) {
+  let db;
+
+  try {
+    const { reference } = req.params;
+    const { appointmentDate, appointmentTime } = req.body;
+
+    if (!appointmentDate || !appointmentTime) {
+      return res.status(400).json({
+        success: false,
+        message: "Date and time are required.",
+      });
+    }
+
+    db = await connectDatabase();
+
+    const appointment = await db.get(
+      `SELECT doctor_id, status
+       FROM appointments
+       WHERE booking_reference = ?`,
+      [reference],
+    );
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found.",
+      });
+    }
+
+    if (appointment.status === "Cancelled") {
+      return res.status(400).json({
+        success: false,
+        message: "Cancelled appointments cannot be rescheduled.",
+      });
+    }
+
+    const existing = await db.get(
+      `SELECT id
+       FROM appointments
+       WHERE doctor_id = ?
+         AND appointment_date = ?
+         AND appointment_time = ?
+         AND status = 'Confirmed'
+         AND booking_reference != ?`,
+      [appointment.doctor_id, appointmentDate, appointmentTime, reference],
+    );
+
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: "That time slot is already booked.",
+      });
+    }
+
+    const queue = await db.get(
+      `SELECT COUNT(*) AS total
+       FROM appointments
+       WHERE doctor_id = ?
+         AND appointment_date = ?
+         AND status = 'Confirmed'
+         AND booking_reference != ?`,
+      [appointment.doctor_id, appointmentDate, reference],
+    );
+
+    const newQueue = queue.total + 1;
+
+    await db.run(
+      `UPDATE appointments
+       SET appointment_date = ?,
+           appointment_time = ?,
+           queue_number = ?
+       WHERE booking_reference = ?`,
+      [appointmentDate, appointmentTime, newQueue, reference],
+    );
+
+    res.json({
+      success: true,
+      queueNumber: newQueue,
+      message: "Appointment rescheduled successfully.",
+    });
+  } catch (error) {
+    console.error("Reschedule error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Unable to reschedule appointment.",
+    });
+  } finally {
+    if (db) await db.close();
+  }
+}
