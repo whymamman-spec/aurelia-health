@@ -8,6 +8,8 @@ const navigation = [
   { label: "Services", to: "/services" },
   { label: "Doctors", to: "/doctors" },
   { label: "Departments", to: "/departments" },
+  { label: "Appointments", to: "/appointments" },
+  { label: "Reception", to: "/reception" },
   { label: "About", to: "/about" },
   { label: "Contact", to: "/contact" },
 ];

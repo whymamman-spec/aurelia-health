@@ -11,6 +11,7 @@ import Contact from "./pages/Contact";
 import Appointments from "./pages/Appointments";
 import NotFound from "./pages/NotFound";
 import ComponentShowcase from "./pages/ComponentShowcase";
+import Receptionist from "./pages/Receptionist";
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/appointments" element={<Appointments />} />
+          <Route path="/reception" element={<Receptionist />} />
 
           {/* Temporary development route */}
           <Route path="/design-system" element={<ComponentShowcase />} />
