@@ -30,8 +30,15 @@ CREATE TABLE appointments (
     appointment_date TEXT NOT NULL,
     appointment_time TEXT NOT NULL,
     queue_number INTEGER NOT NULL,
+
     status TEXT DEFAULT 'Confirmed',
+
+    checked_in_at DATETIME,
+    consultation_started_at DATETIME,
+    completed_at DATETIME,
+
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
     FOREIGN KEY (department_id) REFERENCES departments(id),
     FOREIGN KEY (doctor_id) REFERENCES doctors(id)
 );
