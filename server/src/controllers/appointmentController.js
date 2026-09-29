@@ -37,7 +37,6 @@ export async function createAppointment(req, res) {
     );
 
     const queueNumber = result.total + 1;
-
     const bookingReference = generateReference();
 
     await db.run(
@@ -76,9 +75,7 @@ export async function createAppointment(req, res) {
       message: "Unable to book appointment.",
     });
   } finally {
-    if (db) {
-      await db.close();
-    }
+    if (db) await db.close();
   }
 }
 
@@ -92,14 +89,14 @@ export async function getAppointmentByReference(req, res) {
 
     const appointment = await db.get(
       `SELECT
-        appointments.booking_reference,
-        appointments.patient_name,
-        appointments.appointment_date,
-        appointments.appointment_time,
-        appointments.queue_number,
-        appointments.status,
-        departments.name AS department,
-        doctors.full_name AS doctor
+          appointments.booking_reference,
+          appointments.patient_name,
+          appointments.appointment_date,
+          appointments.appointment_time,
+          appointments.queue_number,
+          appointments.status,
+          departments.name AS department,
+          doctors.full_name AS doctor
        FROM appointments
        JOIN departments
          ON appointments.department_id = departments.id
@@ -128,9 +125,7 @@ export async function getAppointmentByReference(req, res) {
       message: "Unable to retrieve appointment.",
     });
   } finally {
-    if (db) {
-      await db.close();
-    }
+    if (db) await db.close();
   }
 }
 
@@ -169,9 +164,7 @@ export async function cancelAppointment(req, res) {
       message: "Unable to cancel appointment.",
     });
   } finally {
-    if (db) {
-      await db.close();
-    }
+    if (db) await db.close();
   }
 }
 
@@ -191,7 +184,6 @@ export async function rescheduleAppointment(req, res) {
 
     db = await connectDatabase();
 
-    // Get the existing appointment
     const existingAppointment = await db.get(
       `SELECT *
        FROM appointments
@@ -207,7 +199,6 @@ export async function rescheduleAppointment(req, res) {
       });
     }
 
-    // Make sure the new slot isn't already booked
     const existingSlot = await db.get(
       `SELECT id
        FROM appointments
@@ -251,8 +242,130 @@ export async function rescheduleAppointment(req, res) {
       message: "Unable to reschedule appointment.",
     });
   } finally {
-    if (db) {
-      await db.close();
+    if (db) await db.close();
+  }
+}
+
+/* ================================
+   RECEPTION WORKFLOW (Milestone 4.2)
+================================ */
+
+export async function checkInAppointment(req, res) {
+  let db;
+
+  try {
+    const { reference } = req.params;
+
+    db = await connectDatabase();
+
+    const result = await db.run(
+      `UPDATE appointments
+       SET status = 'Checked-in',
+           checked_in_at = CURRENT_TIMESTAMP
+       WHERE booking_reference = ?
+       AND status = 'Confirmed'`,
+      [reference],
+    );
+
+    if (result.changes === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Confirmed appointment not found.",
+      });
     }
+
+    res.json({
+      success: true,
+      message: "Patient checked in successfully.",
+    });
+  } catch (error) {
+    console.error("Check-in error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Unable to check in patient.",
+    });
+  } finally {
+    if (db) await db.close();
+  }
+}
+
+export async function startConsultation(req, res) {
+  let db;
+
+  try {
+    const { reference } = req.params;
+
+    db = await connectDatabase();
+
+    const result = await db.run(
+      `UPDATE appointments
+       SET status = 'In Consultation',
+           consultation_started_at = CURRENT_TIMESTAMP
+       WHERE booking_reference = ?
+       AND status = 'Checked-in'`,
+      [reference],
+    );
+
+    if (result.changes === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Checked-in appointment not found.",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Consultation started.",
+    });
+  } catch (error) {
+    console.error("Consultation start error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Unable to start consultation.",
+    });
+  } finally {
+    if (db) await db.close();
+  }
+}
+
+export async function completeConsultation(req, res) {
+  let db;
+
+  try {
+    const { reference } = req.params;
+
+    db = await connectDatabase();
+
+    const result = await db.run(
+      `UPDATE appointments
+       SET status = 'Completed',
+           completed_at = CURRENT_TIMESTAMP
+       WHERE booking_reference = ?
+       AND status = 'In Consultation'`,
+      [reference],
+    );
+
+    if (result.changes === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Consultation not found.",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Consultation completed.",
+    });
+  } catch (error) {
+    console.error("Completion error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Unable to complete consultation.",
+    });
+  } finally {
+    if (db) await db.close();
   }
 }

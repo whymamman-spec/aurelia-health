@@ -5,6 +5,9 @@ import {
   getAppointmentByReference,
   cancelAppointment,
   rescheduleAppointment,
+  checkInAppointment,
+  startConsultation,
+  completeConsultation,
 } from "../controllers/appointmentController.js";
 
 import { getBookedSlots } from "../controllers/slotController.js";
@@ -19,6 +22,13 @@ router.get("/slots", getBookedSlots);
 router.patch("/:reference/cancel", cancelAppointment);
 
 router.patch("/:reference/reschedule", rescheduleAppointment);
+
+// Reception workflow
+router.patch("/:reference/checkin", checkInAppointment);
+
+router.patch("/:reference/start", startConsultation);
+
+router.patch("/:reference/complete", completeConsultation);
 
 router.get("/:reference", getAppointmentByReference);
 
